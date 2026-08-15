@@ -1,38 +1,25 @@
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: smartpark-postgres
+    restart: unless-stopped
+
     environment:
       POSTGRES_DB: smartpark
       POSTGRES_USER: smartpark
-      POSTGRES_PASSWORD: smartpark
+      POSTGRES_PASSWORD: smartpark_password
+
+    ports:
+      - "5433:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U smartpark -d smartpark"]
       interval: 5s
       timeout: 5s
-      retries: 10
-
-  redis:
-    image: redis:7-alpine
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
-
-  backend:
-    build: ./backend
-    environment:
-      DATABASE_URL: postgresql+psycopg://smartpark:smartpark@postgres:5432/smartpark
-      CORS_ORIGINS_RAW: http://localhost:5173
-      SEED_DEMO_DATA: "true"
-    ports:
-      - "8000:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
+      retries: 5
 
 volumes:
   postgres_data:
-  redis_data:
