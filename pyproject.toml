@@ -1,0 +1,3 @@
+[tool.ruff.lint]
+# FastAPI declares request dependencies in endpoint parameter defaults.
+ignore = ["B008"]
