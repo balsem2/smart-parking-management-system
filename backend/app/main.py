@@ -1,8 +1,44 @@
+import asyncio
+from contextlib import asynccontextmanager, suppress
+
 from fastapi import FastAPI
-
-from api.router import api_router
+from api.routes import (
+    analytics,
+    monitoring,
+    parking,
+    payments,
+    reservations,
+    realtime,
+    system,
+    users,
+    vehicles,
+)
 from core.database import Base, engine
+from services.realtime import close_redis_connection, listen_for_dashboard_events
 
-app = FastAPI(title="SmartPark AI API", version="1.0.0")
-app.include_router(api_router)
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    listener_task = asyncio.create_task(listen_for_dashboard_events())
+    yield
+    listener_task.cancel()
+    with suppress(asyncio.CancelledError):
+        await listener_task
+    await close_redis_connection()
+
+
+app = FastAPI(title="SmartPark AI API", version="1.0.0", lifespan=lifespan)
+for route_module in (
+    system,
+    vehicles,
+    parking,
+    reservations,
+    realtime,
+    users,
+    payments,
+    monitoring,
+    analytics,
+):
+    app.include_router(route_module.router)
+
 Base.metadata.create_all(bind=engine)

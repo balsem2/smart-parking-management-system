@@ -7,6 +7,7 @@ from models.parking_spot import ParkingSpot
 from models.vehicle import Vehicle
 from services.billing import calculate_parking_fee
 from services.monitoring import create_alert, create_parking_full_alert_if_needed, log_event, resolve_parking_full_alerts
+from services.realtime import publish_dashboard_event
 
 router = APIRouter(tags=["parking"])
 
@@ -21,7 +22,7 @@ def update_spot_status(spot_id: int, data: dict, db: Session = Depends(get_db)):
     if not spot: return {"error": "Parking spot not found"}
     spot.status = data["status"]; db.commit(); db.refresh(spot); return {"message": "Parking spot status updated successfully", "id": spot.id, "number": spot.number, "status": spot.status}
 @router.post("/parking-sessions")
-def create_parking_session(session: dict, db: Session = Depends(get_db)):
+async def create_parking_session(session: dict, db: Session = Depends(get_db)):
     vehicle = db.query(Vehicle).filter(Vehicle.id == session["vehicle_id"]).first()
     if not vehicle: raise HTTPException(status_code=404, detail="Vehicle not found")
     if vehicle.status == "BLACKLISTED":
@@ -30,11 +31,13 @@ def create_parking_session(session: dict, db: Session = Depends(get_db)):
     if not spot: raise HTTPException(status_code=404 if spot_id else 400, detail="Parking spot not found" if spot_id else "Parking spot is required")
     if spot.status != "FREE": raise HTTPException(status_code=400, detail="Parking spot is not available")
     if db.query(ParkingSession).filter(ParkingSession.vehicle_id == vehicle.id, ParkingSession.status == "ACTIVE").first(): raise HTTPException(status_code=400, detail="Vehicle already has an active session")
-    result = ParkingSession(vehicle_id=vehicle.id, parking_spot_id=spot.id, status="ACTIVE", amount=0); db.add(result); spot.status = "OCCUPIED"; db.flush(); log_event(db, "VEHICLE_ENTERED", "Vehicle entered the parking", vehicle_id=vehicle.id, parking_session_id=result.id); create_parking_full_alert_if_needed(db); db.commit(); db.refresh(result); return result
+    result = ParkingSession(vehicle_id=vehicle.id, parking_spot_id=spot.id, status="ACTIVE", amount=0); db.add(result); spot.status = "OCCUPIED"; db.flush(); log_event(db, "VEHICLE_ENTERED", "Vehicle entered the parking", vehicle_id=vehicle.id, parking_session_id=result.id); create_parking_full_alert_if_needed(db); db.commit(); db.refresh(result)
+    await publish_dashboard_event({"type": "spot_updated", "spot_id": spot.id, "status": "OCCUPIED", "vehicle_id": vehicle.id, "parking_session_id": result.id})
+    return result
 @router.get("/parking-sessions")
 def get_parking_sessions(db: Session = Depends(get_db)): return db.query(ParkingSession).all()
 @router.post("/parking-sessions/{session_id}/exit")
-def exit_parking_session(session_id: int, db: Session = Depends(get_db)):
+async def exit_parking_session(session_id: int, db: Session = Depends(get_db)):
     result = db.query(ParkingSession).filter(ParkingSession.id == session_id).first()
     if not result: raise HTTPException(status_code=404, detail="Parking session not found")
     if result.status == "COMPLETED": raise HTTPException(status_code=400, detail="Parking session already completed")
@@ -43,4 +46,6 @@ def exit_parking_session(session_id: int, db: Session = Depends(get_db)):
     if spot: spot.status = "FREE"
     log_event(db, "VEHICLE_EXITED", "Vehicle exited the parking", vehicle_id=result.vehicle_id, parking_session_id=result.id)
     if result.duration >= 480: create_alert(db, "LONG_STAY", "Vehicle exceeded the configured maximum parking duration", vehicle_id=result.vehicle_id, parking_session_id=result.id)
-    resolve_parking_full_alerts(db); db.commit(); db.refresh(result); return result
+    resolve_parking_full_alerts(db); db.commit(); db.refresh(result)
+    await publish_dashboard_event({"type": "spot_updated", "spot_id": result.parking_spot_id, "status": "FREE", "vehicle_id": result.vehicle_id, "parking_session_id": result.id})
+    return result

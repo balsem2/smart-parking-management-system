@@ -1,10 +1,14 @@
 import os
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
