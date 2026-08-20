@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from core.database import get_db
-from models.parking_session import ParkingSession
-from models.parking_spot import ParkingSpot
-from models.payment import Payment
+
+from app.core.database import get_db
+from app.models.parking_session import ParkingSession
+from app.models.parking_spot import ParkingSpot
+from app.models.payment import Payment
 router = APIRouter(tags=["analytics"])
 def today(value):
     if not value: return False

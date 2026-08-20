@@ -3,12 +3,12 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from core.database import get_db
-from models.parking_spot import ParkingSpot
-from models.reservation import Reservation
-from models.user import User
-from models.vehicle import Vehicle
-from services.monitoring import log_event
+from app.core.database import get_db
+from app.models.parking_spot import ParkingSpot
+from app.models.reservation import Reservation
+from app.models.user import User
+from app.models.vehicle import Vehicle
+from app.services.monitoring import log_event
 
 router = APIRouter(tags=["reservations"])
 ACTIVE_STATUSES = ("PENDING", "CONFIRMED")

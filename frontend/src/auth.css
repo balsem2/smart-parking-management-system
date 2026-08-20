@@ -1,0 +1,131 @@
+.auth {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background:
+    radial-gradient(circle at 15% 10%, #1b3b55 0, transparent 34%),
+    radial-gradient(circle at 85% 90%, #123d38 0, transparent 32%),
+    #091120;
+}
+
+.auth-card {
+  width: min(100%, 440px);
+  padding: 42px;
+  background: rgba(16, 27, 49, .96);
+  border: 1px solid #263b5b;
+  border-radius: 18px;
+  box-shadow: 0 24px 70px #02081799;
+}
+
+.auth-brand {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 24px;
+  border-radius: 14px;
+  background: #43dca9;
+  color: #08271f;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.auth-card .eyebrow {
+  margin-bottom: 10px;
+  color: #43dca9;
+}
+
+.auth-card h1 {
+  margin: 0;
+  color: #f4f7ff;
+  font-size: clamp(30px, 6vw, 42px);
+  line-height: 1.08;
+}
+
+.auth-card > p:not(.eyebrow):not(.switch) {
+  margin: 12px 0 28px;
+  color: #91a2bc;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.auth-card form {
+  display: grid;
+  gap: 17px;
+}
+
+.auth-card label {
+  display: grid;
+  gap: 8px;
+  color: #dce6f7;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.auth-card input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 13px;
+  border: 1px solid #304664;
+  border-radius: 8px;
+  background: #0d192d;
+  color: #f4f7ff;
+  outline: none;
+  font: inherit;
+}
+
+.auth-card input:focus {
+  border-color: #43dca9;
+  box-shadow: 0 0 0 3px #43dca922;
+}
+
+.auth-card form > button {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 4px;
+  border-radius: 8px;
+  background: #43dca9;
+  color: #06271f;
+  font-weight: 800;
+}
+
+.auth-card form > button:hover {
+  background: #62e6bc;
+}
+
+.auth-card .error {
+  display: block;
+  margin-top: -4px;
+  color: #ff8992;
+  line-height: 1.4;
+}
+
+.auth-card .switch {
+  margin: 25px 0 0;
+  color: #91a2bc;
+  text-align: center;
+  font-size: 13px;
+}
+
+.auth-card .switch button {
+  padding: 0;
+  background: transparent;
+  color: #43dca9;
+  font-weight: 800;
+}
+
+.auth-card .switch button:hover {
+  color: #7aefc9;
+}
+
+@media (max-width: 480px) {
+  .auth {
+    padding: 20px 14px;
+  }
+
+  .auth-card {
+    padding: 30px 22px;
+    border-radius: 14px;
+  }
+}

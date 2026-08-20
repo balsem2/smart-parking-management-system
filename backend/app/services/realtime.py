@@ -5,7 +5,7 @@ import logging
 from fastapi import WebSocket
 from redis.exceptions import RedisError
 
-from core.redis import redis_client
+from app.core.redis import redis_client
 
 logger = logging.getLogger(__name__)
 CHANNEL = "smartpark:dashboard-events"

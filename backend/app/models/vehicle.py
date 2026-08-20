@@ -1,6 +1,7 @@
-from core.database import Base
 from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.sql import func
+
+from app.core.database import Base
 
 
 class Vehicle(Base):

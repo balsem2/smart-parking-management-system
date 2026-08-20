@@ -1,13 +1,20 @@
 from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from core.database import get_db
-from models.parking_session import ParkingSession
-from models.parking_spot import ParkingSpot
-from models.vehicle import Vehicle
-from services.billing import calculate_parking_fee
-from services.monitoring import create_alert, create_parking_full_alert_if_needed, log_event, resolve_parking_full_alerts
-from services.realtime import publish_dashboard_event
+
+from app.core.database import get_db
+from app.models.parking_session import ParkingSession
+from app.models.parking_spot import ParkingSpot
+from app.models.vehicle import Vehicle
+from app.services.billing import calculate_parking_fee
+from app.services.monitoring import (
+    create_alert,
+    create_parking_full_alert_if_needed,
+    log_event,
+    resolve_parking_full_alerts,
+)
+from app.services.realtime import publish_dashboard_event
 
 router = APIRouter(tags=["parking"])
 
@@ -17,10 +24,40 @@ def create_parking_spot(spot: dict, db: Session = Depends(get_db)):
 @router.get("/parking-spots")
 def get_parking_spots(db: Session = Depends(get_db)): return db.query(ParkingSpot).all()
 @router.put("/parking-spots/{spot_id}/status")
-def update_spot_status(spot_id: int, data: dict, db: Session = Depends(get_db)):
-    spot = db.query(ParkingSpot).filter(ParkingSpot.id == spot_id).first()
-    if not spot: return {"error": "Parking spot not found"}
-    spot.status = data["status"]; db.commit(); db.refresh(spot); return {"message": "Parking spot status updated successfully", "id": spot.id, "number": spot.number, "status": spot.status}
+async def update_spot_status(
+    spot_id: int,
+    data: dict,
+    db: Session = Depends(get_db)
+):
+    spot = db.query(ParkingSpot).filter(
+        ParkingSpot.id == spot_id
+    ).first()
+
+    if not spot:
+        raise HTTPException(
+            status_code=404,
+            detail="Parking spot not found"
+        )
+
+    new_status = data["status"].upper()
+
+    spot.status = new_status
+
+    db.commit()
+    db.refresh(spot)
+
+    await publish_dashboard_event({
+        "type": "spot_updated",
+        "spot_id": spot.id,
+        "status": spot.status
+    })
+
+    return {
+        "message": "Parking spot status updated successfully",
+        "id": spot.id,
+        "number": spot.number,
+        "status": spot.status
+    }
 @router.post("/parking-sessions")
 async def create_parking_session(session: dict, db: Session = Depends(get_db)):
     vehicle = db.query(Vehicle).filter(Vehicle.id == session["vehicle_id"]).first()

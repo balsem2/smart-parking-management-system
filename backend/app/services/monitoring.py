@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
+
 from sqlalchemy.orm import Session
-from models.alert import Alert
-from models.event import Event
-from models.parking_spot import ParkingSpot
+
+from app.models.alert import Alert
+from app.models.event import Event
+from app.models.parking_spot import ParkingSpot
 
 def log_event(db: Session, event_type: str, description: str, **ids):
     event = Event(event_type=event_type, description=description, **ids); db.add(event); return event

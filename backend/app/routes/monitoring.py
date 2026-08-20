@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from core.database import get_db
-from models.alert import Alert
-from models.event import Event
-from services.monitoring import create_alert
+
+from app.core.database import get_db
+from app.models.alert import Alert
+from app.models.event import Event
+from app.services.monitoring import create_alert
 
 router = APIRouter(tags=["monitoring"])
 ALERT_TYPES = {"BLACKLISTED_VEHICLE", "PARKING_FULL", "CAMERA_OFFLINE", "UNAUTHORIZED_ACCESS", "LONG_STAY"}

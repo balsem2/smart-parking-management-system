@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 
-from core.database import Base
 from sqlalchemy import Column, DateTime, Integer, String, Text
+
+from app.core.database import Base
 
 
 class Event(Base):
