@@ -1,5 +1,6 @@
 export const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001'
 export const WS_URL = import.meta.env.VITE_WS_URL || 'ws://127.0.0.1:8001/ws/dashboard'
+export const VISION_URL = import.meta.env.VITE_VISION_URL || 'http://127.0.0.1:8002'
 
 async function request(path, options = {}) {
   const token = localStorage.getItem('smartpark_token')
@@ -32,8 +33,21 @@ export function getParkingSpots() {
   return request('/parking-spots')
 }
 
+export function getSmartParkingOptions() { return request('/smart-parking/options') }
+export function getMyDigitalTicket() { return request('/smart-parking/my-ticket') }
+export function getFindMyCar() { return request('/smart-parking/find-my-car') }
+export function getRewards() { return request('/smart-parking/rewards') }
+
+export function createParkingSpot(data) {
+  return request('/parking-spots', { method: 'POST', body: JSON.stringify(data) })
+}
+
 export function getPayments() {
   return request('/payments')
+}
+
+export function payPayment(id, paymentMethod = 'CARD') {
+  return request(`/payments/${id}/pay`, { method: 'PUT', body: JSON.stringify({ payment_method: paymentMethod }) })
 }
 
 export function getAlerts() {
@@ -50,6 +64,10 @@ export function updateSpotStatus(id, status) {
 
 export function getParkingSessions() {
   return request('/parking-sessions')
+}
+
+export function getMyParkingSessions() {
+  return request('/my-parking-sessions')
 }
 
 export function exitParkingSession(id) {
@@ -88,10 +106,22 @@ export function getVehicles() {
   return request('/vehicles')
 }
 
+export function createVehicle(data) {
+  return request('/vehicles', { method: 'POST', body: JSON.stringify(data) })
+}
+
 export function getReservations() {
   return request('/reservations')
 }
 
+export function createReservation(data) {
+  return request('/reservations', { method: 'POST', body: JSON.stringify(data) })
+}
+
 export function resetPassword(data) {
   return request('/reset-password', { method: 'POST', body: JSON.stringify(data) })
+}
+
+export function forgotPassword(email) {
+  return request('/forgot-password', { method: 'POST', body: JSON.stringify({ email }) })
 }

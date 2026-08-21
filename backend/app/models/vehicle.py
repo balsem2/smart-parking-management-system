@@ -1,4 +1,5 @@
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.core.database import Base
@@ -10,6 +11,7 @@ class Vehicle(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     plate_number = Column(String(20), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     owner_name = Column(String(100), nullable=True)
     owner_phone = Column(String(20), nullable=True)
@@ -22,3 +24,10 @@ class Vehicle(Base):
     status = Column(String(30), nullable=False, default="VISITOR")
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    images = relationship(
+        "VehicleImage",
+        back_populates="vehicle",
+        cascade="all, delete-orphan",
+    )
+    user = relationship("User")

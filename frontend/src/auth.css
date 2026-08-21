@@ -50,6 +50,13 @@
   line-height: 1.5;
 }
 
+.portal-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: -10px 0 14px;
+}
+
 .auth-card form {
   display: grid;
   gap: 17px;
@@ -129,3 +136,6 @@
     border-radius: 14px;
   }
 }
+
+.auth-card form > button.forgot-password{width:auto;min-height:0;margin:-8px 0 0 auto;padding:0;background:transparent;color:#55dcb0;font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px}.auth-card form > button.forgot-password:hover{background:transparent;color:#83f0cd}
+.auth-reset{margin-top:18px;padding:16px;border:1px solid #2a3c59;border-radius:10px;background:#0d1a30}.auth-reset h2{font-size:16px;margin:0 0 6px}.auth-reset p{font-size:12px;color:#aab9cf;margin:0}.auth-reset form>div{display:flex;justify-content:flex-end;gap:8px}.success{color:#55dcb0}

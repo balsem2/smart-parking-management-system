@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import StatCard from '../components/StatCard'
 import { getDashboardOverview, getOccupancy, getParkingSpots, WS_URL } from '../services/api'
 
@@ -12,8 +12,12 @@ export default function DashboardLive() {
   const [spots, setSpots] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const refreshing = useRef(false)
+  const refreshTimer = useRef(null)
 
   async function refresh() {
+    if (refreshing.current) return
+    refreshing.current = true
     setLoading(true)
     try {
       const [overviewData, occupancyData, spotsData] = await Promise.all([
@@ -26,6 +30,7 @@ export default function DashboardLive() {
     } catch (err) {
       setError(err.message)
     } finally {
+      refreshing.current = false
       setLoading(false)
     }
   }
@@ -33,8 +38,13 @@ export default function DashboardLive() {
   useEffect(() => {
     refresh()
     const socket = new WebSocket(WS_URL)
-    socket.onmessage = refresh
-    return () => socket.close()
+    socket.onmessage = () => {
+      // Several camera/parking events can arrive together. Batch them into one
+      // refresh so the dashboard remains responsive for administrators.
+      clearTimeout(refreshTimer.current)
+      refreshTimer.current = setTimeout(refresh, 700)
+    }
+    return () => { clearTimeout(refreshTimer.current); socket.close() }
   }, [])
 
   const rate = occupancy?.occupancy_rate_percent || 0

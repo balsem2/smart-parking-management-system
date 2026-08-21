@@ -6,6 +6,7 @@ from .payment import Payment
 from .reservation import Reservation
 from .user import User
 from .vehicle import Vehicle
+from .vehicle_image import VehicleImage
 
 __all__ = [
     "Alert",
@@ -16,4 +17,5 @@ __all__ = [
     "Reservation",
     "User",
     "Vehicle",
+    "VehicleImage",
 ]

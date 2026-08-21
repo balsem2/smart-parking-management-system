@@ -10,6 +10,8 @@ class User(Base):
 
     username = Column(String(50), nullable=False, unique=True)
     email = Column(String(100), nullable=False, unique=True)
+    full_name = Column(String(100), nullable=True)
+    national_id = Column(String(30), nullable=True, unique=True, index=True)
 
     password_hash = Column(String(255), nullable=True)
 
