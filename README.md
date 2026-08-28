@@ -170,7 +170,3 @@ SmartPark AI provides a complete simulated parking flow for a PFE demonstration.
 - **Live IP camera/barrier:** camera stream URL, supported hardware and barrier-controller protocol.
 - **Dedicated Tunisian plate model:** labelled dataset, training environment and accuracy evaluation.
 - **Production operations:** HTTPS domain, backups, external rate limiter, monitoring and alerting.
-
-## License
-
-This repository is provided for academic/PFE use. Add an explicit license before public commercial use.
