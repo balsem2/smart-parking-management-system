@@ -4,7 +4,6 @@ from sqlalchemy.sql import func
 
 from app.core.database import Base
 
-
 class Vehicle(Base):
     __tablename__ = "vehicles"
 

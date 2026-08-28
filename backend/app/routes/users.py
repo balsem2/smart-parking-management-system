@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Security
+from fastapi import APIRouter, Depends, HTTPException, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 import os
@@ -19,6 +19,7 @@ from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.services.monitoring import log_event
 from app.services.email import send_password_reset_email
+from app.services.login_rate_limit import clear_login_attempts, ensure_login_allowed, record_failed_login
 
 router = APIRouter(tags=["users"])
 ROLES = {"SUPER_ADMIN", "ADMIN", "OPERATOR", "SECURITY", "USER"}
@@ -233,12 +234,16 @@ def register(data: dict, db: Session = Depends(get_db)):
 
 @router.post("/auth/login")
 @router.post("/login")
-def login(credentials: dict, db: Session = Depends(get_db)):
+def login(credentials: dict, request: Request, db: Session = Depends(get_db)):
     username_or_email = credentials.get("username", "").strip() or credentials.get("email", "").strip()
     portal = str(credentials.get("portal", "")).strip().upper()
+    client_host = request.client.host if request.client else "unknown"
+    attempt_key = f"{client_host}:{username_or_email.lower()}"
+    ensure_login_allowed(attempt_key)
     user = db.query(User).filter((User.username == username_or_email) | (User.email == username_or_email.lower())).first()
     password = credentials.get("password", "")
     if not user or not user.is_active or user.status != "ACTIVE" or not user.password_hash or not verify_password(password, user.password_hash):
+        record_failed_login(attempt_key)
         log_event(db, "ACCESS_DENIED", "Invalid login attempt", user_id=user.id if user else None)
         db.commit()
         raise HTTPException(status_code=401, detail="Invalid username or password")
@@ -246,6 +251,7 @@ def login(credentials: dict, db: Session = Depends(get_db)):
         raise HTTPException(status_code=403, detail="Please use the customer portal for this account")
     if portal == "CUSTOMER" and user.role != "USER":
         raise HTTPException(status_code=403, detail="Please use the staff portal for this account")
+    clear_login_attempts(attempt_key)
     return {"message":"Login successful", "access_token":create_access_token({"user_id":user.id,"username":user.username,"role":user.role}), "token_type":"bearer"}
 
 

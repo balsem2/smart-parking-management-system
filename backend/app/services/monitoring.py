@@ -16,9 +16,10 @@ def create_alert(db: Session, alert_type: str, message: str, severity="WARNING",
     alert = Alert(alert_type=alert_type, message=message, severity=severity, **ids); db.add(alert); return alert
 
 
-def create_reservation_time_exceeded_alerts(db: Session) -> None:
+def create_reservation_time_exceeded_alerts(db: Session) -> list[Alert]:
     """Create one active alert for each car still parked after its paid booking ends."""
     now = datetime.now(timezone.utc)
+    created_alerts: list[Alert] = []
     active_sessions = db.query(ParkingSession).filter(ParkingSession.status == "ACTIVE").all()
 
     for session in active_sessions:
@@ -43,7 +44,7 @@ def create_reservation_time_exceeded_alerts(db: Session) -> None:
             Alert.status == "ACTIVE",
         ).first()
         if not existing_alert:
-            create_alert(
+            alert = create_alert(
                 db,
                 "RESERVATION_TIME_EXCEEDED",
                 "Vehicle is still parked after its paid reservation ended.",
@@ -51,3 +52,5 @@ def create_reservation_time_exceeded_alerts(db: Session) -> None:
                 vehicle_id=session.vehicle_id,
                 parking_session_id=session.id,
             )
+            created_alerts.append(alert)
+    return created_alerts

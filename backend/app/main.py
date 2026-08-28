@@ -1,4 +1,5 @@
 import asyncio
+import os
 from pathlib import Path
 from contextlib import asynccontextmanager, suppress
 
@@ -27,6 +28,30 @@ from app.services.realtime import (
     listen_for_dashboard_events,
 )
 from app.services.parking_spots import seed_default_parking_spots
+from app.services.monitoring import create_reservation_time_exceeded_alerts
+from app.services.realtime import publish_dashboard_event
+
+
+async def monitor_reservation_overtime() -> None:
+    """Periodically create and broadcast alerts for overstaying reservations."""
+    interval_seconds = max(15, int(os.getenv("RESERVATION_MONITOR_INTERVAL_SECONDS", "60")))
+    while True:
+        db = SessionLocal()
+        try:
+            alerts = create_reservation_time_exceeded_alerts(db)
+            db.commit()
+            for alert in alerts:
+                await publish_dashboard_event({
+                    "type": "alert_created",
+                    "alert_id": alert.id,
+                    "alert_type": alert.alert_type,
+                    "severity": alert.severity,
+                    "vehicle_id": alert.vehicle_id,
+                    "parking_session_id": alert.parking_session_id,
+                })
+        finally:
+            db.close()
+        await asyncio.sleep(interval_seconds)
 
 
 @asynccontextmanager
@@ -39,16 +64,17 @@ async def lifespan(_: FastAPI):
     finally:
         db.close()
 
-    listener_task = asyncio.create_task(
-        listen_for_dashboard_events()
-    )
+    listener_task = asyncio.create_task(listen_for_dashboard_events())
+    reservation_monitor_task = asyncio.create_task(monitor_reservation_overtime())
 
     yield
 
     listener_task.cancel()
+    reservation_monitor_task.cancel()
 
-    with suppress(asyncio.CancelledError):
-        await listener_task
+    for task in (listener_task, reservation_monitor_task):
+        with suppress(asyncio.CancelledError):
+            await task
 
     await close_redis_connection()
 

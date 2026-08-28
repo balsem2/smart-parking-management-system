@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getParkingSpots } from '../services/api'
 
 const VISION_URL = import.meta.env.VITE_VISION_URL || 'http://127.0.0.1:8002'
@@ -12,6 +12,9 @@ export default function CameraDetection() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [usingWebcam, setUsingWebcam] = useState(false)
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
 
   useEffect(() => {
     getParkingSpots()
@@ -19,10 +22,53 @@ export default function CameraDetection() {
       .catch(err => setError(err.message))
   }, [])
 
+  useEffect(() => () => {
+    streamRef.current?.getTracks().forEach(track => track.stop())
+  }, [])
+
+  const stopWebcam = () => {
+    streamRef.current?.getTracks().forEach(track => track.stop())
+    streamRef.current = null
+    setUsingWebcam(false)
+  }
+
+  const startWebcam = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) return setError('Webcam access is not supported by this browser.')
+    try {
+      setError('')
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+      streamRef.current = stream
+      setUsingWebcam(true)
+      window.setTimeout(() => {
+        if (videoRef.current) videoRef.current.srcObject = stream
+      }, 0)
+    } catch {
+      setError('Camera permission was denied or no webcam is available.')
+    }
+  }
+
+  const captureWebcamFrame = () => {
+    const video = videoRef.current
+    if (!video?.videoWidth || !video?.videoHeight) return setError('Wait for the camera preview before capturing.')
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
+    canvas.toBlob(blob => {
+      if (!blob) return setError('Could not capture the camera frame.')
+      const captured = new File([blob], `webcam-${Date.now()}.jpg`, { type: 'image/jpeg' })
+      setFile(captured)
+      setPreview(URL.createObjectURL(captured))
+      setResult(null)
+      stopWebcam()
+    }, 'image/jpeg', 0.95)
+  }
+
   const handleFile = event => {
     const selected = event.target.files?.[0]
     if (!selected) return
     setFile(selected)
+    stopWebcam()
     setPreview(URL.createObjectURL(selected))
     setResult(null)
     setError('')
@@ -34,9 +80,11 @@ export default function CameraDetection() {
     setError('')
   }
 
+  const isVideo = Boolean(file?.type.startsWith('video/'))
+
   const detect = async event => {
     event.preventDefault()
-    if (!file) return setError('Select a vehicle image first.')
+    if (!file) return setError('Select a vehicle image or video first.')
     if (mode === 'ENTRY' && !spotId) return setError('Select a free parking spot.')
 
     setLoading(true)
@@ -47,7 +95,10 @@ export default function CameraDetection() {
       formData.append('file', file)
       if (mode === 'ENTRY') formData.append('parking_spot_id', spotId)
       const token = localStorage.getItem('smartpark_token')
-      const response = await fetch(`${VISION_URL}/${mode === 'ENTRY' ? 'detect-and-register' : 'detect-and-exit'}`, {
+      const endpoint = isVideo
+        ? mode === 'ENTRY' ? 'detect-video-and-register' : 'detect-video-and-exit'
+        : mode === 'ENTRY' ? 'detect-and-register' : 'detect-and-exit'
+      const response = await fetch(`${VISION_URL}/${endpoint}`, {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
@@ -77,9 +128,10 @@ export default function CameraDetection() {
       <section className="panel camera-panel">
         <h2>{isEntry ? 'Vehicle entry' : 'Vehicle exit'}</h2>
         <div className="portal-choice"><button type="button" className={isEntry ? '' : 'secondary'} onClick={() => changeMode('ENTRY')}>Entry</button><button type="button" className={!isEntry ? '' : 'secondary'} onClick={() => changeMode('EXIT')}>Exit</button></div>
+        <div className="camera-actions"><button type="button" className="small-button secondary" onClick={usingWebcam ? stopWebcam : startWebcam}>{usingWebcam ? 'Stop webcam' : 'Use webcam'}</button>{usingWebcam && <button type="button" className="small-button" onClick={captureWebcamFrame}>Capture frame</button>}</div>
         <label className="upload-box">
-          {preview ? <img src={preview} alt="Selected vehicle" /> : <span>Select an image containing a vehicle</span>}
-          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} />
+          {usingWebcam ? <video ref={videoRef} autoPlay muted playsInline /> : preview ? isVideo ? <video src={preview} controls /> : <img src={preview} alt="Selected vehicle" /> : <span>Select an image or a short video containing a vehicle</span>}
+          <input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" onChange={handleFile} />
         </label>
         <form onSubmit={detect} className="camera-form">
           {isEntry && <label>Free parking spot<select value={spotId} onChange={event => setSpotId(event.target.value)} required><option value="">Select a spot</option>{spots.map(spot => <option key={spot.id} value={spot.id}>{spot.number} · {spot.zone} · {spot.floor || 'Ground'}</option>)}</select></label>}
